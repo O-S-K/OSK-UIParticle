@@ -49,5 +49,10 @@ public class TESTT : MonoBehaviour
     {
         UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.WorldToWorld3D,"Coin2", point3D, target3D);
     }
+    
+    public void DestroyAll()
+    {
+        UIParticle.Instance.DestroyParticle("Coin");
+    }
      
 }
