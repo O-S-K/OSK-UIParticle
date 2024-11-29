@@ -25,6 +25,7 @@ Link Yotube: https://youtu.be/miw8NwCDcBE
 
 ### 1. Test the Demo
 - Check out the **Demo Folder** and play the provided **Scene** to see it in action.
+- Add plugin Dotween on Asset Store.
 
 ### 2. Add the Script to Your Scene
 1. Drag the **UIParticle** script into your Scene.
