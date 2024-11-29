@@ -2,6 +2,8 @@
 
 Enhance your game's visual feedback with smooth, customizable collection animations.
 
+Link Yotube: https://youtu.be/miw8NwCDcBE
+
 ---
 
 ## Key Features
