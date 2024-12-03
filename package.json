@@ -2,5 +2,8 @@
 	"name": "com.osk.uiparticle",
 	"version": "1.0.0",
 	"displayName": "UI Particle Collection",
-	"description": "Enhance your game's visual feedback with smooth, customizable collection animations." 
+	"description": "Enhance your game's visual feedback with smooth, customizable collection animations.",
+	"author": "QuyLe", 
+  	"unity": "2022.3",
 }
+ 
