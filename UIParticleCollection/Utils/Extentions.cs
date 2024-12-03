@@ -40,6 +40,7 @@ namespace OSK
         public float max;
 
         public float RandomValue => Random.Range(min, max);
+        public float Average => (min + max) / 2;
 
         public MinMaxFloat(float min, float max)
         {

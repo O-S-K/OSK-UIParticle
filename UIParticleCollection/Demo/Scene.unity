@@ -653,20 +653,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80c0df42b4413b649974590119ffdb5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  settings: {root: {fileID: 0}, playOnEnable: 1, setAutoKill: 1, delay: 0, duration: 1, loopcount: 0, loopType: 0, typeAnim: 0, ease: 1, curve:
-      m_Curve: []
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-, updateType: 0, useUnscaledTime: 0, eventCompleted:
-      m_PersistentCalls:
-        m_Calls:
-        - {m_Target: {fileID: 342545254}, m_TargetAssemblyTypeName: UnityEngine.Behaviour, UnityEngine, m_MethodName: set_enabled, m_Mode: 6, m_Arguments: {m_ObjectArgument: {fileID: 0}, m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine, m_IntArgument: 0, m_FloatArgument: 0, m_StringArgument: , m_BoolArgument: 0}, m_CallState: 2}
-}
-  target: {fileID: 0}
-  text: {fileID: 342545255}
-  from: 0
-  to: 1000
 --- !u!114 &342545255
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2413,8 +2399,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41768cc817b6091438f14d7bba3ab70b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  UIParticleSO: {fileID: 11400000, guid: 4b34191850477ca4ab48bc089ef567c7, type: 2}
-  canvas: {fileID: 1271570112391856544}
+  _uiParticleSO: {fileID: 11400000, guid: 4b34191850477ca4ab48bc089ef567c7, type: 2}
+  _canvas: {fileID: 1271570112391856544}
 --- !u!4 &4002682481985299126
 Transform:
   m_ObjectHideFlags: 0
