@@ -27,7 +27,6 @@ namespace OSK
     {
         [Header("Setup")]
         public string name;
-        public GameObject icon;
         [Min(1)]
         public int numberOfEffects = 10;
         public bool isDrop = true;

@@ -45,7 +45,7 @@ namespace OSK
 
                     EditorGUI.indentLevel++;
                     EditorGUILayout.PropertyField(element.FindPropertyRelative("name"));
-                    EditorGUILayout.PropertyField(element.FindPropertyRelative("icon"));
+                    //EditorGUILayout.PropertyField(element.FindPropertyRelative("icon"));
                     EditorGUILayout.PropertyField(element.FindPropertyRelative("numberOfEffects"));
                     EditorGUILayout.PropertyField(element.FindPropertyRelative("isDrop"));
                     EditorGUI.indentLevel--;

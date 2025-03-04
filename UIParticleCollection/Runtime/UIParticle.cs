@@ -60,7 +60,8 @@ namespace OSK
             }
         }
 
-        public void Spawn(ETypeSpawn typeSpawn, string name, Transform from, Transform to, int num = -1, System.Action onCompleted = null)
+        public void Spawn(ETypeSpawn typeSpawn, string name, GameObject icon, Transform from, Transform to,
+            int num = -1, System.Action onCompleted = null)
         {
             string key = $"{name}_{from.GetInstanceID()}_{to.GetInstanceID()}";
             if (_activeCoroutines.ContainsKey(key))
@@ -69,12 +70,12 @@ namespace OSK
                 _activeCoroutines.Remove(key);
             }
 
-            Coroutine coroutine = StartCoroutine(SpawnCoroutine(typeSpawn, name, from, to, num, onCompleted));
+            Coroutine coroutine = StartCoroutine(SpawnCoroutine(typeSpawn, name, icon, from, to, num, onCompleted));
             _activeCoroutines[key] = coroutine;
         }
 
-        private IEnumerator SpawnCoroutine(ETypeSpawn typeSpawn, string name, Transform from, Transform to, int num,
-            System.Action onCompleted)
+        private IEnumerator SpawnCoroutine(ETypeSpawn typeSpawn, string name, GameObject icon, Transform from,
+            Transform to, int num, System.Action onCompleted)
         {
             Vector3 fromPosition = from.position;
             Vector3 toPosition = to.position;
@@ -97,11 +98,12 @@ namespace OSK
                     break;
             }
 
-            SpawnEffect(is3D, name, fromPosition, toPosition, num, onCompleted);
+            SpawnEffect(is3D, name, fromPosition, toPosition, num, onCompleted, icon);
             yield return null;
         }
 
-        private void SpawnEffect(bool is3D, string name, Vector3 from, Vector3 to, int num, System.Action @event)
+        private void SpawnEffect(bool is3D, string name, Vector3 from, Vector3 to, int num, System.Action @event,
+            GameObject icon)
         {
             var effectSetting = _effectSettings.ToList().Find(x => x.name == name).Clone();
             effectSetting.pointSpawn = from;
@@ -113,15 +115,15 @@ namespace OSK
 
             if (gameObject.activeInHierarchy)
             {
-                StartCoroutine(IESpawnEffect(is3D, effectSetting));
+                StartCoroutine(IESpawnEffect(is3D, effectSetting, icon));
             }
         }
 
-        private IEnumerator IESpawnEffect(bool is3D, EffectSetting effectSetting)
+        private IEnumerator IESpawnEffect(bool is3D, EffectSetting effectSetting, GameObject icon)
         {
             for (int i = 0; i < effectSetting.numberOfEffects; i++)
             {
-                var effect = Pool.Spawn(effectSetting.name, effectSetting.icon);
+                var effect = Pool.Spawn(icon.GetInstanceID().ToString(), icon);
                 effect.transform.SetParent(_canvas.transform);
                 effect.transform.position = effectSetting.pointSpawn;
 
@@ -284,7 +286,7 @@ namespace OSK
             if (!effectSetting.paths.Contains(effectSetting.pointTarget))
                 effectSetting.paths.AddLastList(effectSetting.pointTarget);
         }
- 
+
 
         private Vector3 ConvertToUICameraSpace(Transform pointTarget)
         {
