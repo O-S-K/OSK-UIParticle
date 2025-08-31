@@ -124,26 +124,19 @@ namespace OSK
 
             switch (typeSpawn)
             {
-                case ETypeSpawn.UIToWorld:
-                    toPosition = ConvertToUICameraSpace(to);
-                    break;
-                case ETypeSpawn.WorldToUI:
-                    fromPosition = ConvertToUICameraSpace(from);
-                    break;
+                case ETypeSpawn.UIToWorld: toPosition = ConvertToUICameraSpace(to); break;
+                case ETypeSpawn.WorldToUI: fromPosition = ConvertToUICameraSpace(from); break;
                 case ETypeSpawn.WorldToWorld:
                     fromPosition = ConvertToUICameraSpace(from);
                     toPosition = ConvertToUICameraSpace(to);
                     break;
-                case ETypeSpawn.WorldToWorld3D:
-                    is3D = true;
-                    break;
+                case ETypeSpawn.WorldToWorld3D: is3D = true; break;
             }
-
             await IESpawnEffect(is3D, name, prefab, fromPosition, toPosition, num, onCompleted, spawnedObjects, token);
         }
 
-        private async UniTask IESpawnEffect(bool is3D, string name, GameObject prefab, Vector3 from, Vector3 to, int num,
-            System.Action onCompleted, List<GameObject> spawnedObjects, CancellationToken token)
+        private async UniTask IESpawnEffect(bool is3D, string name, GameObject prefab, Vector3 from, Vector3 to, 
+            int num, System.Action onCompleted, List<GameObject> spawnedObjects, CancellationToken token)
         {
             var effectSetting = _effectSettings.Find(x => x.name == name)?.Clone();
             if (effectSetting == null) return;
@@ -162,7 +155,7 @@ namespace OSK
             {
                 token.ThrowIfCancellationRequested();
 
-                GameObject effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform, 1) as GameObject;
+                var effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform, 1);
                 if (effect == null) continue;
 
                 if (effect.transform.parent != parent)
