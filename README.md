@@ -44,32 +44,78 @@ Use the following functions to play the effects:
 ```csharp
 public void SpawnUIToUI()
 {
-    UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.UIToUI, "Coin", point2D, target);
+    UIParticle.Instance.Spawn(new ParticleSetup()
+    {
+         typeSpawn = UIParticle.ETypeSpawn.UIToUI,
+         name = "Coin",
+         prefab = icon,
+         from = point2D,
+         to = targetUI,
+         num = numCoin,
+         onCompleted = () => { Debug.Log("Complete"); }
+    }); 
 }
 
 public void SpawnUIToWorld()
 {
-    UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.UIToWorld, "Coin", point2D, target3D);
+    UIParticle.Instance.Spawn(new ParticleSetup()
+    {
+         typeSpawn = UIParticle.ETypeSpawn.UIToWorld,
+         name = "Coin",
+         prefab = icon,
+         from = point2D,
+         to = target3D,
+         num = numCoin,
+         onCompleted = () => { Debug.Log("Complete"); }
+    });  
 }
 
 public void SpawnWorldToUI()
 {
-    UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.WorldToUI, "Coin", point3D, target);
+    UIParticle.Instance.Spawn(new ParticleSetup()
+    {
+         typeSpawn = UIParticle.ETypeSpawn.WorldToUI,
+         name = "Coin",
+         prefab = icon,
+         from = point3D,
+         to = target3D,
+         num = numCoin,
+         onCompleted = () => { Debug.Log("Complete"); }
+    }); 
 }
 
 public void SpawnWorldToWorld()
 {
-    UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.WorldToWorld, "Coin", point3D, target3D);
+    UIParticle.Instance.Spawn(new ParticleSetup()
+    {
+         typeSpawn = UIParticle.ETypeSpawn.WorldToWorld,
+         name = "Coin",
+         prefab = icon,
+         from = point3D,
+         to = target3D,
+         num = numCoin,
+         onCompleted = () => { Debug.Log("Complete"); }
+    });  
 }
 
 public void SpawnWorldToWorld3D()
 {
-    UIParticle.Instance.Spawn(UIParticle.ETypeSpawn.WorldToWorld3D, "Coin2", point3D, target3D);
+    UIParticle.Instance.Spawn(new ParticleSetup()
+    {
+         typeSpawn = UIParticle.ETypeSpawn.WorldToWorld3D,
+         name = "Coin3D",
+         prefab = icon,
+         from = point3D,
+         to = target3D,
+         num = numCoin,
+         onCompleted = () => { Debug.Log("Complete"); }
+    });   
 }
 
 public void DestroyAll()
 {
-    UIParticle.Instance.DestroyParticle("Coin");
+    UIParticle.Instance.DestroyEffect("Coin");
+    //UIParticle.Instance.DestroyAllEffects();
 }
 ```  
 ## Parameters

@@ -3,79 +3,120 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using System.Linq;
-using System.Collections;
+using Cysharp.Threading.Tasks;
+using System.Threading;
+using Sirenix.OdinInspector;
 using Random = UnityEngine.Random;
 
 namespace OSK
 {
-    public class UIParticle : MonoBehaviour
+    public class UIParticle : SingletonGlobal<UIParticle>
     {
-        public static UIParticle Instance { get; private set; }
+        private readonly Dictionary<string, CancellationTokenSource> _activeTasks = new();
 
-        public UIParticleSO Config => _uiParticleSO;
-        [SerializeField] private UIParticleSO _uiParticleSO;
+        public UIParticleSO UIParticleSO => _UIParticleSO;
+        [Required, SerializeField] private UIParticleSO _UIParticleSO;
 
-        public Canvas Canvas => _canvas;
-        [SerializeField] private Canvas _canvas;
+        [ShowInInspector, ReadOnly]
+        private List<GameObject> _parentEffects = new List<GameObject>();
 
+        [ShowInInspector, ReadOnly]
+        private List<EffectSetting> _effectSettings = new List<EffectSetting>();
+
+        [SerializeField, Required]
+        private Transform _canvasTransform;
+
+        [ShowInInspector, ReadOnly]
         private Camera _mainCamera;
-        private Camera _uiCamera;
+        public Camera MainCamera
+        {
+            get => _mainCamera;
+            set => _mainCamera = value;
+        }
 
-        private Dictionary<string, Coroutine> _activeCoroutines = new Dictionary<string, Coroutine>();
-        private EffectSetting[] _effectSettings;
+        [SerializeField, Required]
+        private Camera _uiCamera;
+        public Camera UICamera
+        {
+            get => _uiCamera;
+            set => _uiCamera = value;
+        }
 
         public enum ETypeSpawn
         {
-            UIToUI,
-            UIToWorld,
-            WorldToUI,
-            WorldToWorld,
-            WorldToWorld3D,
+            UIToUI = 0,
+            UIToWorld = 1,
+            WorldToUI = 2,
+            WorldToWorld = 3,
+            WorldToWorld3D = 4,
         }
 
-        private void Awake() => Instance = this;
-        private void Start() => Initialize();
+        private void Awake() => Initialize();
 
         private void Initialize()
         {
-            _effectSettings = _uiParticleSO.EffectSettings;
-            if (_effectSettings.Length == 0)
-            {
-                Debug.LogError("UIParticle: No effect settings found." +
-                               "Please add at least one effect setting in the inspector.");
+            if(_mainCamera == null) _mainCamera = Camera.main;
+            _effectSettings = _UIParticleSO.EffectSettings.ToList();
+            if (_effectSettings.Count == 0)
                 return;
-            }
 
-            _mainCamera = Camera.main;
-            _uiCamera = _canvas.worldCamera;
-
-            for (int i = 0; i < _effectSettings.Length; i++)
+            _parentEffects = new List<GameObject>();
+            for (int i = 0; i < _effectSettings.Count; i++)
             {
-                if (_effectSettings[i].typeMove == TypeMove.Beziers
-                    || _effectSettings[i].typeMove == TypeMove.CatmullRom
-                    || _effectSettings[i].typeMove == TypeMove.Path)
+                _parentEffects.Add(new GameObject(_effectSettings[i].name));
+                _parentEffects[i].transform.SetParent(_canvasTransform);
+                _parentEffects[i].transform.localScale = Vector3.one;
+
+                if (_effectSettings[i].typeMove == TypeMove.Beziers ||
+                    _effectSettings[i].typeMove == TypeMove.CatmullRom ||
+                    _effectSettings[i].typeMove == TypeMove.Path)
                 {
                     AddPaths(_effectSettings[i]);
                 }
             }
         }
 
-        public void Spawn(ETypeSpawn typeSpawn, string name, GameObject icon, Transform from, Transform to,
-            int num = -1, System.Action onCompleted = null)
+        public void SetUIParticleSO(UIParticleSO uiParticleSO)
         {
-            string key = $"{name}_{from.GetInstanceID()}_{to.GetInstanceID()}";
-            if (_activeCoroutines.ContainsKey(key))
-            {
-                StopCoroutine(_activeCoroutines[key]);
-                _activeCoroutines.Remove(key);
-            }
-
-            Coroutine coroutine = StartCoroutine(SpawnCoroutine(typeSpawn, name, icon, from, to, num, onCompleted));
-            _activeCoroutines[key] = coroutine;
+            _UIParticleSO = uiParticleSO;
         }
 
-        private IEnumerator SpawnCoroutine(ETypeSpawn typeSpawn, string name, GameObject icon, Transform from,
-            Transform to, int num, System.Action onCompleted)
+        public UniTask<List<GameObject>> Spawn(ParticleSetup particleSetup)
+        {
+            return Spawn(particleSetup.typeSpawn, particleSetup.name, particleSetup.prefab, particleSetup.from,
+                particleSetup.to, particleSetup.num,
+                particleSetup.onCompleted);
+        }
+
+        public async UniTask<List<GameObject>> Spawn(ETypeSpawn typeSpawn, string name, GameObject effectPrefab,
+            Transform from, Transform to,
+            int num = -1, System.Action onCompleted = null)
+        {
+            if (effectPrefab == null)
+            {
+                Logg.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
+                return null;
+            }
+
+            string key = $"{name}_{from.GetInstanceID()}_{to.GetInstanceID()}";
+            if (_activeTasks.ContainsKey(key))
+            {
+                _activeTasks[key].Cancel();
+                _activeTasks.Remove(key);
+            }
+
+            var cts = new CancellationTokenSource();
+            _activeTasks[key] = cts;
+
+            List<GameObject> spawnedObjects = new List<GameObject>();
+            await SpawnAsync(typeSpawn, name, effectPrefab, from, to, num, onCompleted, spawnedObjects, cts.Token);
+            _activeTasks.Remove(key);
+
+            return spawnedObjects;
+        }
+
+        private async UniTask SpawnAsync(ETypeSpawn typeSpawn, string name, GameObject prefab, Transform from,
+            Transform to, int num, System.Action onCompleted, List<GameObject> spawnedObjects, CancellationToken token)
         {
             Vector3 fromPosition = from.position;
             Vector3 toPosition = to.position;
@@ -98,85 +139,92 @@ namespace OSK
                     break;
             }
 
-            SpawnEffect(is3D, name, fromPosition, toPosition, num, onCompleted, icon);
-            yield return null;
+            await IESpawnEffect(is3D, name, prefab, fromPosition, toPosition, num, onCompleted, spawnedObjects, token);
         }
 
-        private void SpawnEffect(bool is3D, string name, Vector3 from, Vector3 to, int num, System.Action @event,
-            GameObject icon)
+        private async UniTask IESpawnEffect(bool is3D, string name, GameObject prefab, Vector3 from, Vector3 to, int num,
+            System.Action onCompleted, List<GameObject> spawnedObjects, CancellationToken token)
         {
-            var effectSetting = _effectSettings.ToList().Find(x => x.name == name).Clone();
+            var effectSetting = _effectSettings.Find(x => x.name == name)?.Clone();
+            if (effectSetting == null) return;
+
             effectSetting.pointSpawn = from;
             effectSetting.pointTarget = to;
-
             if (num > 0)
                 effectSetting.numberOfEffects = num;
-            effectSetting.OnCompleted = @event;
+            effectSetting.OnCompleted = onCompleted;
 
-            if (gameObject.activeInHierarchy)
-            {
-                StartCoroutine(IESpawnEffect(is3D, effectSetting, icon));
-            }
-        }
+            var parent = _parentEffects.Find(x => x.name == effectSetting.name)?.transform;
+            if (parent == null || !parent.gameObject.activeInHierarchy)
+                return;
 
-        private IEnumerator IESpawnEffect(bool is3D, EffectSetting effectSetting, GameObject icon)
-        {
             for (int i = 0; i < effectSetting.numberOfEffects; i++)
             {
-                var effect = Pool.Spawn(icon.GetInstanceID().ToString(), icon);
-                effect.transform.SetParent(_canvas.transform);
+                token.ThrowIfCancellationRequested();
+
+                GameObject effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform, 1) as GameObject;
+                if (effect == null) continue;
+
+                if (effect.transform.parent != parent)
+                    effect.transform.SetParent(parent);
                 effect.transform.position = effectSetting.pointSpawn;
 
                 if (!is3D)
-                {
                     effect.transform.localScale = Vector3.one;
-                    effect.gameObject.GetOrAdd<RectTransform>();
-                }
+
+                spawnedObjects.Add(effect);
 
                 if (effectSetting.isDrop)
-                {
                     DoDropEffect(effect, effectSetting);
-                }
                 else
-                {
                     DoMoveTarget(effect, effectSetting);
-                }
             }
 
-            var totalTimeOnCompleted = effectSetting.timeDrop.Average
-                                       + effectSetting.delayDrop.Average
-                                       + effectSetting.timeMove.Average
-                                       + effectSetting.delayMove.Average;
-            yield return new WaitForSeconds(totalTimeOnCompleted - 0.1f);
+            float totalTimeOnCompleted = effectSetting.timeDrop.TimeAverage +
+                                         effectSetting.delayDrop.TimeAverage +
+                                         effectSetting.timeMove.TimeAverage +
+                                         effectSetting.delayMove.TimeAverage;
+
+            try
+            {
+                await UniTask.Delay((int)((totalTimeOnCompleted - 0.1f) * 1000), cancellationToken: token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
             effectSetting.OnCompleted?.Invoke();
         }
 
         private void DoDropEffect(GameObject effect, EffectSetting effectSetting)
         {
-            Vector3 target = effectSetting.pointSpawn + Random.insideUnitSphere * effectSetting.sphereRadius;
-            var timeDrop = effectSetting.timeDrop.RandomValue;
-            var timeDropDelay = effectSetting.delayDrop.RandomValue;
+            float timeDrop = effectSetting.timeDrop.RandomValue;
+            Tween tween = effect.transform.DOMove(effectSetting.pointSpawn +
+                                                  Random.insideUnitSphere * effectSetting.sphereRadius, timeDrop)
+                .SetDelay(effectSetting.delayDrop.RandomValue);
 
-            Tween tween = effect.transform
-                .DOMove(target, timeDrop)
-                .SetDelay(timeDropDelay);
+            if (effectSetting.isScaleDrop)
+            {
+                effect.transform.localScale = effectSetting.scaleDropStart * Vector3.one;
+                effect.transform.DOScale(effectSetting.scaleDropEnd, timeDrop)
+                    .SetDelay(effectSetting.delayDrop.RandomValue).SetEase(effectSetting.easeDrop);
+            }
 
             if (tween != null)
             {
                 if (effectSetting.typeAnimationDrop == TypeAnimation.Ease)
-                {
                     tween.SetEase(effectSetting.easeDrop);
-                }
                 else if (effectSetting.typeAnimationDrop == TypeAnimation.Curve)
-                {
                     tween.SetEase(effectSetting.curveDrop);
-                }
                 else
-                {
                     tween.SetEase(Ease.Linear);
-                }
 
-                tween.OnComplete(() => { DoMoveTarget(effect, effectSetting); });
+                tween.OnComplete(() =>
+                {
+                    effect.transform.DOKill();
+                    DoMoveTarget(effect, effectSetting);
+                });
             }
         }
 
@@ -185,6 +233,13 @@ namespace OSK
             Tween tween = null;
             var timeMove = effectSetting.timeMove.RandomValue;
             var timeMoveDelay = effectSetting.delayMove.RandomValue;
+
+            if (effectSetting.isScaleMove)
+            {
+                effect.transform.localScale = effectSetting.scaleMoveStart * Vector3.one;
+                effect.transform.DOScale(effectSetting.scaleMoveTarget, timeMove)
+                    .SetDelay(timeMoveDelay).SetEase(effectSetting.easeMove);
+            }
 
             switch (effectSetting.typeMove)
             {
@@ -195,8 +250,8 @@ namespace OSK
                 case TypeMove.Beziers:
                     if (effectSetting.paths.Count % 3 != 0)
                     {
-                        Debug.LogError("CubicBezier paths must contain waypoints in multiple of 3");
-                        Pool.Despawn(effect);
+                        Logg.LogError("CubicBezier paths must contain waypoints in multiple of 3");
+                        Main.Pool.Despawn(effect);
                         effectSetting.OnCompleted?.Invoke();
                         break;
                     }
@@ -205,12 +260,11 @@ namespace OSK
                         .DOPath(effectSetting.paths.Select(x => x).ToArray(), timeMove, PathType.CubicBezier)
                         .SetDelay(timeMoveDelay);
                     break;
-
                 case TypeMove.CatmullRom:
                     if (effectSetting.paths.Count < 4)
                     {
-                        Debug.LogError("CatmullRom paths must contain at least 4 waypoints");
-                        Pool.Despawn(effect);
+                        Logg.LogError("CatmullRom paths must contain at least 4 waypoints");
+                        Main.Pool.Despawn(effect);
                         effectSetting.OnCompleted?.Invoke();
                         break;
                     }
@@ -219,7 +273,6 @@ namespace OSK
                         .DOPath(effectSetting.paths.Select(x => x).ToArray(), timeMove, PathType.CatmullRom)
                         .SetDelay(timeMoveDelay);
                     break;
-
                 case TypeMove.Path:
                     tween = effect.transform
                         .DOPath(effectSetting.paths.Select(x => x).ToArray(), timeMove, PathType.Linear)
@@ -232,30 +285,23 @@ namespace OSK
                         .SetDelay(timeMoveDelay);
                     break;
                 case TypeMove.Around:
-                    // Calculate a control point to define the curvature at the spawn point
                     Vector3 controlPoint = effectSetting.pointSpawn +
                                            new Vector3(effectSetting.midPointOffsetX.RandomValue,
                                                effectSetting.height.RandomValue,
                                                effectSetting.midPointOffsetZ.RandomValue);
-
-                    // Create the path
-                    Vector3[] path = new Vector3[]
-                        { effectSetting.pointSpawn, controlPoint, effectSetting.pointTarget };
+                    Vector3[] path = new Vector3[] { effectSetting.pointSpawn, controlPoint, effectSetting.pointTarget };
                     tween = effect.transform.DOPath(path, timeMove, PathType.CatmullRom)
                         .SetDelay(timeMoveDelay);
                     break;
                 case TypeMove.Sin:
                     Vector3[] path1 = new Vector3[effectSetting.pointsCount];
-
                     for (int i = 0; i < effectSetting.pointsCount; i++)
                     {
                         float t = (float)i / (effectSetting.pointsCount - 1);
                         Vector3 point = Vector3.Lerp(effectSetting.pointSpawn, effectSetting.pointTarget, t);
-                        point.y += Mathf.Sin(t * Mathf.PI * 2) *
-                                   effectSetting.height.RandomValue; // Apply sine wave offset
+                        point.y += Mathf.Sin(t * Mathf.PI * 2) * effectSetting.height.RandomValue;
                         path1[i] = point;
                     }
-
                     tween = effect.transform.DOPath(path1, timeMove, PathType.CatmullRom)
                         .SetDelay(timeMoveDelay);
                     break;
@@ -270,10 +316,11 @@ namespace OSK
                 else
                     tween.SetEase(Ease.Linear);
 
-                // TODO: Add scale effect
-                // effect.transform.DOScale(effectSetting.scaleTarget, timeMove)
-                //     .SetDelay(timeMoveDelay);
-                tween.OnComplete(() => { Pool.Despawn(effect); });
+                tween.OnComplete(() =>
+                {
+                    effect.transform.DOKill();
+                    Main.Pool.Despawn(effect);
+                });
             }
         }
 
@@ -287,35 +334,41 @@ namespace OSK
                 effectSetting.paths.AddLastList(effectSetting.pointTarget);
         }
 
+        public void DestroyEffect(string nameEffect)
+        {
+            if (Main.Pool.HasGroup(nameEffect))
+                Main.Pool.DestroyAllInGroup(nameEffect);
+        }
+
+        public void DestroyAllEffects()
+        {
+            Main.Pool.DestroyAllInGroup(KEY_POOL.KEY_UI_EFFECT);
+        }
 
         private Vector3 ConvertToUICameraSpace(Transform pointTarget)
         {
             Vector3 uiWorldPosition;
-            if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            if (Main.UI.Canvas.renderMode == RenderMode.ScreenSpaceOverlay)
             {
                 if (pointTarget is RectTransform rectTarget)
                 {
                     RectTransformUtility.ScreenPointToWorldPointInRectangle(
                         rectTarget, rectTarget.position, _uiCamera, out uiWorldPosition);
                 }
-                else
-                {
-                    uiWorldPosition = _mainCamera.WorldToScreenPoint(pointTarget.position);
-                }
+                else uiWorldPosition = _mainCamera.WorldToScreenPoint(pointTarget.position);
             }
             else
             {
                 Vector3 screenPoint = _mainCamera.WorldToScreenPoint(pointTarget.position);
                 if (screenPoint.z < 0)
                 {
-                    Debug.LogWarning("Object is behind the main camera, unable to convert position.");
+                    Logg.LogWarning("Object is behind the main camera, unable to convert position.");
                     return Vector3.zero;
                 }
 
                 uiWorldPosition = _uiCamera.ScreenToWorldPoint(screenPoint);
                 uiWorldPosition.z = 0;
             }
-
             return uiWorldPosition;
         }
     }
