@@ -30,7 +30,6 @@ namespace OSK
         [ShowIf(nameof(isDrop), true)]
         public MinMaxFloat timeDrop;
         
-        
         // scale
         public bool isScaleDrop = false;
         public float scaleDropStart = 1;
@@ -81,8 +80,8 @@ namespace OSK
         public int pointsCount = 10;
 
         public MinMaxFloat height;
-        public MinMaxFloat timeMove;
         public MinMaxFloat delayMove;
+        public MinMaxFloat timeMove;
         public System.Action OnCompleted;
 
         #endregion
