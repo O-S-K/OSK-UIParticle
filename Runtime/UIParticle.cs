@@ -10,18 +10,20 @@ using Random = UnityEngine.Random;
 
 namespace OSK
 {
-    public class UIParticle : SingletonGlobal<UIParticle>
+    public class UIParticle : MonoBehaviour
     {
+        public static UIParticle Instance { get; private set; }
+        
         private readonly Dictionary<string, CancellationTokenSource> _activeTasks = new();
-
-        public UIParticleSO UIParticleSO => _UIParticleSO;
-        [Required, SerializeField] private UIParticleSO _UIParticleSO;
-
         [ShowInInspector, ReadOnly]
         private List<GameObject> _parentEffects = new List<GameObject>();
 
         [ShowInInspector, ReadOnly]
         private List<EffectSetting> _effectSettings = new List<EffectSetting>();
+        
+        public UIParticleSO UIParticleSO => _UIParticleSO;
+        [Required, SerializeField] private UIParticleSO _UIParticleSO;
+
 
         [SerializeField, Required]
         private Transform _canvasTransform;
@@ -55,6 +57,8 @@ namespace OSK
 
         private void Initialize()
         {
+            Instance = this;
+            
             if(_mainCamera == null) _mainCamera = Camera.main;
             _effectSettings = _UIParticleSO.EffectSettings.ToList();
             if (_effectSettings.Count == 0)
