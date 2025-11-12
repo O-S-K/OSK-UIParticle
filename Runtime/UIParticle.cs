@@ -98,7 +98,7 @@ namespace OSK
         {
             if (effectPrefab == null)
             {
-                Logg.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
+                Debug.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
                 return null;
             }
 
@@ -247,7 +247,7 @@ namespace OSK
                 case TypeMove.Beziers:
                     if (effectSetting.paths.Count % 3 != 0)
                     {
-                        Logg.LogError("CubicBezier paths must contain waypoints in multiple of 3");
+                        Debug.LogError("CubicBezier paths must contain waypoints in multiple of 3");
                         Main.Pool.Despawn(effect);
                         effectSetting.OnCompleted?.Invoke();
                         break;
@@ -260,7 +260,7 @@ namespace OSK
                 case TypeMove.CatmullRom:
                     if (effectSetting.paths.Count < 4)
                     {
-                        Logg.LogError("CatmullRom paths must contain at least 4 waypoints");
+                        Debug.LogError("CatmullRom paths must contain at least 4 waypoints");
                         Main.Pool.Despawn(effect);
                         effectSetting.OnCompleted?.Invoke();
                         break;
@@ -359,7 +359,7 @@ namespace OSK
                 Vector3 screenPoint = _mainCamera.WorldToScreenPoint(pointTarget.position);
                 if (screenPoint.z < 0)
                 {
-                    Logg.LogWarning("Object is behind the main camera, unable to convert position.");
+                    Debug.LogWarning("Object is behind the main camera, unable to convert position.");
                     return Vector3.zero;
                 }
 
