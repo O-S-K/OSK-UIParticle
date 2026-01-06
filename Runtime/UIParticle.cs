@@ -98,7 +98,7 @@ namespace OSK
         {
             if (effectPrefab == null)
             {
-                Debug.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
+                MyLogger.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
                 return null;
             }
 
@@ -159,7 +159,7 @@ namespace OSK
             {
                 token.ThrowIfCancellationRequested();
 
-                var effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform, 1);
+                var effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform);
                 if (effect == null) continue;
 
                 if (effect.transform.parent != parent)
