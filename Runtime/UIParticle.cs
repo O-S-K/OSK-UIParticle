@@ -16,8 +16,11 @@ namespace OSK
         
         private readonly Dictionary<string, CancellationTokenSource> _activeTasks = new();
         [ShowInInspector, ReadOnly]
+        private Dictionary<string, RectTransform> _groupLookup = new();
         private List<GameObject> _parentEffects = new List<GameObject>();
 
+        [ShowInInspector, ReadOnly]
+        private Dictionary<string, EffectSetting> _settingsLookup = new();
         [ShowInInspector, ReadOnly]
         private List<EffectSetting> _effectSettings = new List<EffectSetting>();
         
@@ -60,6 +63,14 @@ namespace OSK
             Instance = this;
             
             if(_mainCamera == null) _mainCamera = Camera.main;
+
+            // Ensure we have a canvas to draw on in the new system
+            if (_canvasTransform == null && Main.UI != null)
+            {
+                _canvasTransform = Main.UI.RootUI.PopupContainer;
+                _uiCamera = Main.UI.UICamera;
+            }
+
             _effectSettings = _UIParticleSO.EffectSettings.ToList();
             if (_effectSettings.Count == 0)
                 return;
@@ -67,9 +78,37 @@ namespace OSK
             _parentEffects = new List<GameObject>();
             for (int i = 0; i < _effectSettings.Count; i++)
             {
-                _parentEffects.Add(new GameObject(_effectSettings[i].name));
-                _parentEffects[i].transform.SetParent(_canvasTransform);
-                _parentEffects[i].transform.localScale = Vector3.one;
+                // Create a fixed group for each effect type as a UI RectTransform
+                var groupName = $"[Group] {_effectSettings[i].name}";
+                var group = new GameObject(groupName, typeof(RectTransform));
+                
+                if (_canvasTransform != null)
+                    group.transform.SetParent(_canvasTransform);
+                
+                // Reset RectTransform to fill parent or stay at zero
+                var rect = group.GetComponent<RectTransform>();
+                rect.localPosition = Vector3.zero;
+                rect.localScale = Vector3.one;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                
+                group.layer = 5; // UI Layer
+
+                // OPTIMIZATION: Sub-Canvas for render isolation
+                var canvas = group.AddComponent<Canvas>();
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 1000 + i;
+
+                // Ensure the group itself doesn't block raycasts
+                var canvasGroup = group.AddComponent<CanvasGroup>();
+                canvasGroup.blocksRaycasts = false;
+                canvasGroup.interactable = false;
+
+                _parentEffects.Add(group);
+                _groupLookup[_effectSettings[i].name] = rect;
+                _settingsLookup[_effectSettings[i].name] = _effectSettings[i];
 
                 if (_effectSettings[i].typeMove == TypeMove.Beziers ||
                     _effectSettings[i].typeMove == TypeMove.CatmullRom ||
@@ -78,6 +117,19 @@ namespace OSK
                     AddPaths(_effectSettings[i]);
                 }
             }
+        }
+
+        /// <summary>
+        /// Pre-warm the pool for a specific style and prefab
+        /// </summary>
+        public void Preload(string styleName, GameObject prefab, int count = 10)
+        {
+            if (!_settingsLookup.ContainsKey(styleName))
+            {
+                Debug.LogWarning($"UIParticle: Cannot preload style '{styleName}' because it's not in SO.");
+                return;
+            }
+            Main.Pool.ExpandPool(styleName, prefab, count);
         }
 
         public void SetUIParticleSO(UIParticleSO uiParticleSO)
@@ -96,12 +148,16 @@ namespace OSK
             Transform from, Transform to,
             int num = -1, System.Action onCompleted = null)
         {
-            if (effectPrefab == null)
+            if (!_settingsLookup.TryGetValue(name, out var effectSetting))
             {
-                MyLogger.LogError("Effect prefab is null, please assign a prefab to spawn effect.");
+                MyLogger.LogError($"Effect setting with name {name} not found.");
                 return null;
             }
 
+            // High-performance group lookup
+            _groupLookup.TryGetValue(name, out var parent);
+            
+            var spawnedObjects = new List<GameObject>();
             string key = $"{name}_{from.GetInstanceID()}_{to.GetInstanceID()}";
             if (_activeTasks.ContainsKey(key))
             {
@@ -112,7 +168,6 @@ namespace OSK
             var cts = new CancellationTokenSource();
             _activeTasks[key] = cts;
 
-            List<GameObject> spawnedObjects = new List<GameObject>();
             await SpawnAsync(typeSpawn, name, effectPrefab, from, to, num, onCompleted, spawnedObjects, cts.Token);
             _activeTasks.Remove(key);
 
@@ -142,8 +197,8 @@ namespace OSK
         private async UniTask IESpawnEffect(bool is3D, string name, GameObject prefab, Vector3 from, Vector3 to, 
             int num, System.Action onCompleted, List<GameObject> spawnedObjects, CancellationToken token)
         {
-            var effectSetting = _effectSettings.Find(x => x.name == name)?.Clone();
-            if (effectSetting == null) return;
+            if (!_settingsLookup.TryGetValue(name, out var settingSource)) return;
+            var effectSetting = settingSource.Clone();
 
             effectSetting.pointSpawn = from;
             effectSetting.pointTarget = to;
@@ -151,24 +206,38 @@ namespace OSK
                 effectSetting.numberOfEffects = num;
             effectSetting.OnCompleted = onCompleted;
 
-            var parent = _parentEffects.Find(x => x.name == effectSetting.name)?.transform;
-            if (parent == null || !parent.gameObject.activeInHierarchy)
+            if (!_groupLookup.TryGetValue(name, out var parent))
+            {
+                Debug.LogWarning($"UIParticle: Parent group for '{name}' not found!");
                 return;
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogError($"UIParticle: No prefab found for spawn call '{name}'!");
+                return;
+            }
 
             for (int i = 0; i < effectSetting.numberOfEffects; i++)
             {
                 token.ThrowIfCancellationRequested();
 
-                var effect = Main.Pool.Spawn(KEY_POOL.KEY_UI_EFFECT, prefab, _canvasTransform);
+                // SMART POOLING: Use the effect name as the group key. 
+                // PoolManager will remember 'parent' as the DefaultParent for this specific effect type.
+                var effect = Main.Pool.Spawn(effectSetting.name, prefab, parent);
                 if (effect == null) continue;
 
-                if (effect.transform.parent != parent)
-                    effect.transform.SetParent(parent);
-                effect.transform.position = effectSetting.pointSpawn;
+                // OPTIMIZATION: Disable raycast targeting for particles
+                var graphics = effect.GetComponentsInChildren<UnityEngine.UI.Graphic>();
+                for (int j = 0; j < graphics.Length; j++)
+                {
+                    graphics[j].raycastTarget = false;
+                }
 
                 if (!is3D)
                     effect.transform.localScale = Vector3.one;
 
+                effect.transform.position = effectSetting.pointSpawn;
                 spawnedObjects.Add(effect);
 
                 if (effectSetting.isDrop)
@@ -339,7 +408,10 @@ namespace OSK
 
         public void DestroyAllEffects()
         {
-            Main.Pool.DestroyAllInGroup(KEY_POOL.KEY_UI_EFFECT);
+            foreach (var setting in _effectSettings)
+            {
+                Main.Pool.DestroyAllInGroup(setting.name);
+            }
         }
 
         private Vector3 ConvertToUICameraSpace(Transform pointTarget)

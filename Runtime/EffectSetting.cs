@@ -16,6 +16,140 @@ namespace OSK
         public int numberOfEffects = 10;
         public bool isDrop = true;
 
+        [PropertyOrder(-1)]
+        [BoxGroup("Quick Presets", CenterLabel = true)]
+        [HorizontalGroup("Quick Presets/Buttons")]
+        [Button(ButtonSizes.Medium, Name = "Coin Explosion")]
+        public void ApplyCoinExplosion()
+        {
+            isDrop = true;
+            sphereRadius = 2f;
+            delayDrop = new MinMaxFloat(0, 0.2f);
+            timeDrop = new MinMaxFloat(0.4f, 0.6f);
+            typeAnimationDrop = TypeAnimation.Ease;
+            easeDrop = Ease.OutBack;
+            
+            isScaleDrop = true;
+            scaleDropStart = 0;
+            scaleDropEnd = 1.2f;
+
+            typeMove = TypeMove.Straight;
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InBack;
+            timeMove = new MinMaxFloat(0.6f, 0.8f);
+            delayMove = new MinMaxFloat(0.1f, 0.3f);
+            
+            isScaleMove = true;
+            scaleMoveStart = 1.2f;
+            scaleMoveTarget = 0.5f;
+        }
+
+        [HorizontalGroup("Quick Presets/Buttons")]
+        [Button(ButtonSizes.Medium, Name = "Fast Collect")]
+        public void ApplyFastCollect()
+        {
+            isDrop = false;
+            typeMove = TypeMove.Straight;
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InQuad;
+            timeMove = new MinMaxFloat(0.4f, 0.5f);
+            delayMove = new MinMaxFloat(0, 0.1f);
+            
+            isScaleMove = true;
+            scaleMoveStart = 1f;
+            scaleMoveTarget = 0.8f;
+        }
+
+        [HorizontalGroup("Quick Presets/Buttons")]
+        [Button(ButtonSizes.Medium, Name = "Smooth Bounce")]
+        public void ApplySmoothBounce()
+        {
+            isDrop = true;
+            sphereRadius = 0.5f;
+            timeDrop = new MinMaxFloat(0.3f, 0.4f);
+            easeDrop = Ease.OutQuad;
+
+            typeMove = TypeMove.Around;
+            height = new MinMaxFloat(2f, 4f);
+            midPointOffsetX = new MinMaxFloat(-2f, 2f);
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InOutSine;
+            timeMove = new MinMaxFloat(0.8f, 1.2f);
+        }
+
+        public void ApplyPuzzleBurst()
+        {
+            isDrop = true;
+            sphereRadius = 1.8f;
+            timeDrop = new MinMaxFloat(0.4f, 0.5f);
+            easeDrop = Ease.OutBack;
+
+            typeMove = TypeMove.Around;
+            height = new MinMaxFloat(50f, 100f);
+            midPointOffsetX = new MinMaxFloat(-150f, 150f);
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InBack;
+            timeMove = new MinMaxFloat(0.6f, 0.8f);
+            delayMove = new MinMaxFloat(0.2f, 0.4f);
+            
+            isScaleMove = true;
+            scaleMoveStart = 1.2f;
+            scaleMoveTarget = 0.6f;
+        }
+
+        public void ApplyPuzzleArc()
+        {
+            isDrop = false;
+            typeMove = TypeMove.Around;
+            height = new MinMaxFloat(200f, 300f);
+            midPointOffsetX = new MinMaxFloat(-250f, 250f);
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InOutQuart;
+            timeMove = new MinMaxFloat(0.8f, 1.0f);
+            delayMove = new MinMaxFloat(0f, 0.2f);
+        }
+
+        public void ApplyPuzzleMagnetic()
+        {
+            isDrop = true;
+            sphereRadius = 0.4f;
+            timeDrop = new MinMaxFloat(0.2f, 0.3f);
+            easeDrop = Ease.OutSine;
+
+            typeMove = TypeMove.Straight;
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InQuart;
+            timeMove = new MinMaxFloat(0.5f, 0.6f);
+            delayMove = new MinMaxFloat(0.1f, 0.2f);
+        }
+
+        public void ApplyPuzzleSequential()
+        {
+            isDrop = false;
+            typeMove = TypeMove.Sin;
+            pointsCount = 10;
+            height = new MinMaxFloat(30f, 60f);
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.InOutSine;
+            timeMove = new MinMaxFloat(1.0f, 1.2f);
+            delayMove = new MinMaxFloat(0.1f, 0.8f); // High delay spread
+        }
+
+        public void ApplyPuzzleElastic()
+        {
+            isDrop = true;
+            sphereRadius = 1.0f;
+            timeDrop = new MinMaxFloat(0.3f, 0.4f);
+            easeDrop = Ease.OutQuad;
+
+            typeMove = TypeMove.DoJump;
+            jumpPower = new MinMaxFloat(100f, 150f);
+            jumpNumber = 1;
+            typeAnimationMove = TypeAnimation.Ease;
+            easeMove = Ease.OutElastic;
+            timeMove = new MinMaxFloat(1.2f, 1.5f);
+        }
+
         [Space(10)]
 
         #region Drop

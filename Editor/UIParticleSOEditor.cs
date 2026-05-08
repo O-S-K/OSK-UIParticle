@@ -1,15 +1,16 @@
 using UnityEngine;
 #if UNITY_EDITOR
+using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 
 namespace OSK
 {
     [CustomEditor(typeof(UIParticleSO))]
-    public class UIParticleSOEditor : Editor
+    public class UIParticleSOEditor : OdinEditor
     {
         private SerializedProperty _effectSettings;
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
             _effectSettings = serializedObject.FindProperty("_effectSettings");
         }
@@ -29,6 +30,8 @@ namespace OSK
 
                 EditorGUILayout.BeginVertical("box");
                 {
+                    DrawPresets(i);
+                    GUILayout.Space(4);
                     DrawSetupGroup(element);
 
                     if (element.FindPropertyRelative("isDrop").boolValue)
@@ -39,7 +42,7 @@ namespace OSK
 
                     GUILayout.Space(4);
                     DrawMoveGroup(element);
-
+                     
                     GUILayout.Space(6);
                     if (GUILayout.Button("❌ Remove Effect", GUILayout.Height(20)))
                     {
@@ -224,6 +227,89 @@ namespace OSK
                 EditorGUILayout.FloatField(maxProp.floatValue, GUILayout.MinWidth(30)),
                 minLimit, maxLimit);
 
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawPresets(int index)
+        {
+            var targetSO = (UIParticleSO)target;
+            var setting = targetSO.EffectSettings[index];
+
+            var btnStyle = new GUIStyle(GUI.skin.button) {  fontSize = 11, fontStyle = FontStyle.Bold };
+
+            EditorGUILayout.BeginHorizontal();
+            
+            GUI.backgroundColor = new Color(1f, 0.8f, 0.4f); // Orange-ish
+            if (GUILayout.Button("💰 Explosion", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Coin Explosion");
+                setting.ApplyCoinExplosion();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(0.4f, 1f, 0.8f); // Cyan-ish
+            if (GUILayout.Button("⚡ Fast Collect", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Fast Collect");
+                setting.ApplyFastCollect();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(0.8f, 0.6f, 1f); // Purple-ish
+            if (GUILayout.Button("🌊 Smooth Bounce", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Smooth Bounce");
+                setting.ApplySmoothBounce();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = Color.white;
+            EditorGUILayout.EndHorizontal();
+
+            // Row 2: Premium Puzzle Presets
+            EditorGUILayout.BeginHorizontal();
+            
+            GUI.backgroundColor = new Color(1f, 0.6f, 0.6f); 
+            if (GUILayout.Button("💎 Burst", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Puzzle Burst");
+                setting.ApplyPuzzleBurst();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(0.6f, 1f, 0.6f);
+            if (GUILayout.Button("🌈 Arc", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Puzzle Arc");
+                setting.ApplyPuzzleArc();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(0.6f, 0.8f, 1f);
+            if (GUILayout.Button("🧲 Magnetic", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Puzzle Magnetic");
+                setting.ApplyPuzzleMagnetic();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(1f, 1f, 0.6f);
+            if (GUILayout.Button("🧵 Sequential", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Puzzle Sequential");
+                setting.ApplyPuzzleSequential();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = new Color(1f, 0.7f, 0.9f);
+            if (GUILayout.Button("🧸 Elastic", btnStyle))
+            {
+                Undo.RecordObject(targetSO, "Apply Puzzle Elastic");
+                setting.ApplyPuzzleElastic();
+                EditorUtility.SetDirty(targetSO);
+            }
+
+            GUI.backgroundColor = Color.white;
             EditorGUILayout.EndHorizontal();
         }
     }
